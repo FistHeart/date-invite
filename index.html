@@ -53,6 +53,12 @@ input:focus,select:focus{border-color:var(--pink2);box-shadow:4px 4px 0 var(--pi
 .music{position:fixed;right:14px;top:max(14px,env(safe-area-inset-top));width:44px;height:44px;border-radius:50%;
   border:3px solid var(--ink);background:#fff;box-shadow:3px 3px 0 var(--ink);font-size:18px;z-index:9}
 .music.playing{background:var(--pink)}
+.music.nudge{animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);padding:12px 18px;border:3px solid var(--ink);
+  border-radius:999px;background:var(--pink-soft);font-weight:800;font-size:13px;box-shadow:4px 4px 0 var(--ink);
+  z-index:10;opacity:0;pointer-events:none;transition:opacity .3s;white-space:nowrap}
+.toast.on{opacity:1}
 .heart{position:fixed;top:-20px;font-size:18px;pointer-events:none;animation:fall linear forwards;z-index:5}
 @keyframes fall{to{transform:translateY(110vh) rotate(360deg);opacity:0}}
 </style>
@@ -60,6 +66,7 @@ input:focus,select:focus{border-color:var(--pink2);box-shadow:4px 4px 0 var(--pi
 <body>
 <div class="petal p1">✿</div><div class="petal p2">❀</div><div class="petal p3">✽</div>
 <button class="music" id="music" aria-label="音乐开关">🎵</button>
+<div class="toast" id="toast">点一下 🎵 放点声音</div>
 <main class="stage">
 
   <section class="card on" id="s0">
@@ -124,7 +131,7 @@ input:focus,select:focus{border-color:var(--pink2);box-shadow:4px 4px 0 var(--pi
   </section>
 
 </main>
-<audio id="bgm" loop preload="none" src="./music.mp3"></audio>
+<audio id="bgm" loop preload="auto" src="./music.m4a"></audio>
 <script>
 const $=id=>document.getElementById(id), cards=[...document.querySelectorAll('.card')];
 const HER=(new URLSearchParams(location.search).get('to')||'').trim();
@@ -136,6 +143,19 @@ function toggleMusic(forceOn){
   else{bgm.pause();mBtn.classList.remove('playing');}
 }
 mBtn.onclick=()=>toggleMusic();
+
+// NFC 打开时先试一次自动播放；被系统拦住就提示手动点
+function nudge(msg){
+  const el=$('toast'); if(msg) el.textContent=msg;
+  el.classList.add('on'); mBtn.classList.add('nudge');
+  setTimeout(()=>el.classList.remove('on'),4200);
+}
+bgm.addEventListener('playing',()=>{mBtn.classList.remove('nudge');});
+window.addEventListener('load',()=>{
+  bgm.volume=0.7;
+  bgm.play().then(()=>mBtn.classList.add('playing'))
+    .catch(()=>nudge('浏览器不让自动播放，点一下 🎵'));
+});
 
 function go(n){cards[step].classList.remove('on');step=n;cards[n].classList.add('on');}
 
